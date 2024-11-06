@@ -37,6 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'psiuApiApp',
 ]
 
 MIDDLEWARE = [
@@ -77,8 +79,14 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    },
+    'DBPsiuApp': { 
+        'ENGINE': 'django.db.backends.sqlite3', 
+        'NAME': BASE_DIR / 'psiu_db.sqlite3', 
+    }, 
 }
+
+DATABASE_ROUTERS = ["psiu_app.db_router.DBRouter"] 
 
 
 # Password validation
