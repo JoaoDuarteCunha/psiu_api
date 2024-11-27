@@ -11,4 +11,4 @@ class Atividade(models.Model):
         db_table = 'Atividade' 
         ordering = ['id'] 
     def __str__(self): 
-        return self.criador_id
+        return str(self.id)

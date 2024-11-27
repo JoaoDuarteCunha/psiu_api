@@ -39,6 +39,11 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'psiuApiApp',
+    'corsheaders',
+    'drf_yasg',
+    'coreapi', 
+    'accounts',
+    'rest_framework.authtoken',
 ]
 
 MIDDLEWARE = [
@@ -49,6 +54,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 ROOT_URLCONF = 'psiu_api.urls'
@@ -69,6 +75,15 @@ TEMPLATES = [
     },
 ]
 
+
+REST_FRAMEWORK = { 
+  'DEFAULT_SCHEMA_CLASS':  
+    'rest_framework.schemas.coreapi.AutoSchema', 
+  'DEFAULT_AUTHENTICATION_CLASSES': [ 
+    'rest_framework.authentication.TokenAuthentication', 
+  ], 
+} 
+
 WSGI_APPLICATION = 'psiu_api.wsgi.application'
 
 
@@ -86,8 +101,15 @@ DATABASES = {
     }, 
 }
 
-DATABASE_ROUTERS = ["psiu_app.db_router.DBRouter"] 
+DATABASE_ROUTERS = ["psiu_api.db_router.DBRouter"] 
 
+CORS_ORIGIN_WHITELIST = [ 
+    'http://0.0.0.0:8080', 
+    'http://127.0.0.1:8080', 
+    'http://localhost:8080', 
+]
+
+CORS_ORIGIN_ALLOW_ALL = True
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators

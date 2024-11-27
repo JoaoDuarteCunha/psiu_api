@@ -4,7 +4,9 @@ from psiuApiApp import views
 app_name = 'psiuApiApp' 
 
 urlpatterns = [ 
-    path('exemploClasse/', views.ExemploClasse.as_view(), name='exemploClasse'), 
-    path('exemploGET/', views.exemploGET, name='exemploGET'), 
-    path('exemploPOST/', views.exemploPOST, name='exemploPOST'), 
+    path("lista/",  
+         views.AtividadeView.as_view(),  
+         name='lista-atividades'), 
+    path('uma_atividade/', views.AtividadeView.as_view(), name='uma-atividade'),
+    path('uma_atividade/<int:id_arg>/', views.AtividadeView.as_view(), name='consulta-atividade'),  
 ] 
