@@ -1,16 +1,41 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.http import HttpResponseRedirect
+from django.urls import reverse_lazy
 
 from rest_framework.response import Response 
 from rest_framework import status 
 # Autenticação 
 from rest_framework.authtoken.views import ObtainAuthToken 
 from rest_framework.authtoken.models import Token 
-from django.contrib.auth import authenticate 
-from django.contrib.auth import login 
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import login
 from django.contrib.auth import logout
+from django.contrib.auth.forms import UserCreationForm 
+
 # Swagger 
 from drf_yasg.utils import swagger_auto_schema 
 from drf_yasg import openapi 
+
+
+
+def registro(request): 
+    if request.method == 'POST': 
+        formulario = UserCreationForm(request.POST) 
+        if formulario.is_valid():
+            senha = formulario.cleaned_data.get('password1')
+            username = formulario.save()
+            user = authenticate(request, username=username, password=senha)
+            if user is not None:
+                login(request, user)
+                return HttpResponseRedirect(reverse_lazy("psiuApp:editar-perfil", args=[user.id,]))
+            return redirect('psiuApp:homepage')
+        else:
+            context = {'form': formulario, } 
+            return render(request, 'psiuApp/registro.html', context)
+    else:
+        formulario = UserCreationForm() 
+        context = {'form': formulario, } 
+        return render(request, 'psiuApp/registro.html', context)
 
 
 class CustomAuthToken(ObtainAuthToken): 

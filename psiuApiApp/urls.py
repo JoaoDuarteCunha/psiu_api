@@ -6,7 +6,10 @@ app_name = 'psiuApiApp'
 urlpatterns = [ 
     path("lista/",  
          views.AtividadeView.as_view(),  
-         name='lista-atividades'), 
+         name='lista-atividades'),
+    path("lista/<str:tipo_atividade>/",  
+         views.AtividadeView.as_view(),  
+         name='lista-atividades-tipo'), 
     path('uma_atividade/', views.AtividadeView.as_view(), name='uma-atividade'),
     path('uma_atividade/<int:id_arg>/', views.AtividadeView.as_view(), name='consulta-atividade'),  
 ] 
