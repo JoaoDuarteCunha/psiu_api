@@ -16,26 +16,30 @@ from django.contrib.auth.forms import UserCreationForm
 from drf_yasg.utils import swagger_auto_schema 
 from drf_yasg import openapi 
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from django.contrib.auth import authenticate, login
+from rest_framework.authtoken.models import Token
+from django.contrib.auth.forms import UserCreationForm
 
-
-def registro(request): 
-    if request.method == 'POST': 
+class RegistroView(APIView):
+    def post(self, request):
         formulario = UserCreationForm(request.POST) 
         if formulario.is_valid():
             senha = formulario.cleaned_data.get('password1')
             username = formulario.save()
             user = authenticate(request, username=username, password=senha)
-            if user is not None:
-                login(request, user)
-                return HttpResponseRedirect(reverse_lazy("psiuApp:editar-perfil", args=[user.id,]))
-            return redirect('psiuApp:homepage')
+            if user is not None: 
+                token, _ = Token.objects.get_or_create(user=user) 
+                login(request, user) 
+                return Response({'token': token.key}, status=status.HTTP_201_CREATED)
+            return Response({'msg': 'Ocorreu uma falha.'}, status=status.HTTP_401_UNAUTHORIZED)
         else:
-            context = {'form': formulario, } 
-            return render(request, 'psiuApp/registro.html', context)
-    else:
-        formulario = UserCreationForm() 
-        context = {'form': formulario, } 
-        return render(request, 'psiuApp/registro.html', context)
+            return Response(
+                {'msg': 'Formulário inválido.', 'errors': formulario.errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 
 class CustomAuthToken(ObtainAuthToken): 
