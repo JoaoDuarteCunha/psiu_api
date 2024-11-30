@@ -101,7 +101,7 @@ class CustomAuthToken(ObtainAuthToken):
     )
     def delete(self, request): 
         try: 
-            token = request.META.get('HTTP_AUTHORIZATION').split(' ')[1] 
+            token = request.META.get('HTTP_AUTHORIZATION')
             token_obj = Token.objects.get(key=token) 
         except (Token.DoesNotExist, IndexError): 
             return Response({'msg': 'Token não existe.'}, status=status.HTTP_400_BAD_REQUEST) 
@@ -124,7 +124,8 @@ class CustomAuthToken(ObtainAuthToken):
         Retorna: o username ou 'visitante' 
         ''' 
         try: 
-            token = request.META.get('HTTP_AUTHORIZATION').split(' ')[1]
+            print(request.META.get('HTTP_AUTHORIZATION'))
+            token = request.META.get('HTTP_AUTHORIZATION')
             token_obj = Token.objects.get(key=token) 
             user = token_obj.user 
 

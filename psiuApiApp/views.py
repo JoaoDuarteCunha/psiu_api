@@ -9,6 +9,11 @@ from rest_framework.renderers import JSONRenderer
 from psiuApiApp.serializers import AtividadeSerializer, CaronaSerializer 
 from psiuApiApp.models import Atividade, Carona 
 
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.permissions import IsAuthenticated  
+from rest_framework.decorators import permission_classes 
+from rest_framework.decorators import authentication_classes
+
 from drf_yasg.utils import swagger_auto_schema 
 from drf_yasg import openapi
 
@@ -19,6 +24,8 @@ class AtividadeView(APIView):
   tipo_atividade_model = {'carona': Carona,}
 
   #INSERE UMA ATIVIDADE
+  @authentication_classes([TokenAuthentication]) 
+  @permission_classes([IsAuthenticated]) 
   def post(self, request):
     tipo_serializer = self.tipo_atividade_serializer[request.data.get('tipo_atividade', None)]
   
@@ -40,8 +47,7 @@ class AtividadeView(APIView):
     try: 
       queryset = Atividade.objects.get(id=id_arg)
       tipo_atividade = queryset.tipo_atividade
-      if tipo_atividade == 'carona':
-        queryset = Carona.objects.get(id=id_arg)
+      queryset = self.tipo_atividade_model['tipo_atividade'].objects.get(id=id_arg)
 
       return queryset, tipo_atividade
     except Atividade.DoesNotExist: # id não existe 
@@ -76,6 +82,8 @@ class AtividadeView(APIView):
         return Response(serializer.data)
     
   #ATUALIZA ATIVIDADE
+  @authentication_classes([TokenAuthentication]) 
+  @permission_classes([IsAuthenticated]) 
   def put(self, request, id_arg): 
     atividade = self.singleAtividade(id_arg) 
     serializer = AtividadeSerializer(atividade,  
@@ -89,6 +97,8 @@ class AtividadeView(APIView):
                       status.HTTP_400_BAD_REQUEST) 
     
   #REMOVE ATIVIDADE
+  @authentication_classes([TokenAuthentication]) 
+  @permission_classes([IsAuthenticated]) 
   def delete(self, request): 
     id_erro = "" 
     erro = False 

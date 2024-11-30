@@ -1,6 +1,6 @@
 class DBRouter(): 
 
-    tabelas = ['Atividade', 'Carona']
+    tabelas = ['Atividade', 'Carona', 'Estudos', 'Liga', 'Extracurriculares', 'ConhecerPessoas']
 
     def db_for_read(self, model, **hints): 
         if model._meta.db_table in self.tabelas: 
