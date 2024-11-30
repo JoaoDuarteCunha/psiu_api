@@ -2,7 +2,7 @@ from django.db import models
 
 class Atividade(models.Model): 
     id = models.AutoField(primary_key=True) 
-    criador_id = models.IntegerField(db_column='criador_id')
+    criador_id = models.TextField(db_column='criador_id')
     adicionais = models.TextField(db_column='adicionais')
     data = models.DateField(db_column='data')
     hora = models.TimeField(db_column='hora')

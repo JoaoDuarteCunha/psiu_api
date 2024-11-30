@@ -1,4 +1,5 @@
 from django.shortcuts import render
+from django.utils.decorators import method_decorator
 
 # Create your views here.
 from rest_framework.views import APIView 
@@ -6,42 +7,53 @@ from rest_framework.response import Response
 from rest_framework import status 
 from rest_framework.decorators import api_view, renderer_classes 
 from rest_framework.renderers import JSONRenderer 
-from psiuApiApp.serializers import AtividadeSerializer, CaronaSerializer 
-from psiuApiApp.models import Atividade, Carona 
+from psiuApiApp.serializers import AtividadeSerializer, CaronaSerializer, ConhecerPessoasSerializer, EstudosSerializer, ExtracurricularesSerializer, LigaSerializer 
+from psiuApiApp.models import Atividade, Carona, ConhecerPessoas, Estudos, Extracurriculares, Liga 
+from rest_framework.authtoken.models import Token 
 
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.authentication import TokenAuthentication
-from rest_framework.permissions import IsAuthenticated  
-from rest_framework.decorators import permission_classes 
-from rest_framework.decorators import authentication_classes
 
 from drf_yasg.utils import swagger_auto_schema 
 from drf_yasg import openapi
 
 class AtividadeView(APIView): 
 
+  tipo_atividade_serializer = {'carona': CaronaSerializer, 'estudos': EstudosSerializer, 'ligas': LigaSerializer, 'extracurriculares': ExtracurricularesSerializer, 'conhecer_pessoas': ConhecerPessoasSerializer}
+  tipo_atividade_model = {'carona': Carona, 'estudos': Estudos, 'ligas': Liga, 'extracurriculares': Extracurriculares, 'conhecer_pessoas': ConhecerPessoas}
 
-  tipo_atividade_serializer = {'carona': CaronaSerializer,}
-  tipo_atividade_model = {'carona': Carona,}
+  authentication_classes = [TokenAuthentication]
 
-  #INSERE UMA ATIVIDADE
-  @authentication_classes([TokenAuthentication]) 
-  @permission_classes([IsAuthenticated]) 
-  def post(self, request):
-    tipo_serializer = self.tipo_atividade_serializer[request.data.get('tipo_atividade', None)]
-  
-    if tipo_serializer is not None:
-      serializer = tipo_serializer(data=request.data) 
-      if serializer.is_valid(): 
-          serializer.save() 
-          return Response(serializer.data,  
-                          status.HTTP_201_CREATED)
+  def get_permissions(self):
+      if self.request.method == 'GET':
+          return [AllowAny()]
       else:
-        return Response(serializer.errors,  
-                        status.HTTP_400_BAD_REQUEST)
-    else:
-      return Response("Tipo de atividade inválido! Especifique com o campo 'tipo_atividade'.",  
-                        status.HTTP_400_BAD_REQUEST)
-  
+          return [IsAuthenticated()]
+    
+  def post(self, request):
+      tipo_serializer = self.tipo_atividade_serializer.get(request.data.get('tipo_atividade', None))
+      if tipo_serializer is not None:
+          
+          try: 
+            token = request.META.get('HTTP_AUTHORIZATION').split(' ')[1] 
+            token_obj = Token.objects.get(key=token) 
+          except (Token.DoesNotExist, IndexError): 
+              return Response({'msg': 'Token não existe.'}, status=status.HTTP_400_BAD_REQUEST) 
+          
+          data=request.data
+          data['criador_id'] = token_obj.user.username
+          serializer = tipo_serializer(data=data)
+          if serializer.is_valid():
+              serializer.save() 
+              return Response(serializer.data, status=status.HTTP_201_CREATED)
+          else:
+              print(serializer.errors)
+              return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+      else:
+          return Response(
+              {"detail": "Tipo de atividade inválido! Especifique com o campo 'tipo_atividade'."},
+              status=status.HTTP_400_BAD_REQUEST
+          )
     
   def singleAtividade(self, id_arg): 
     try: 
@@ -82,8 +94,6 @@ class AtividadeView(APIView):
         return Response(serializer.data)
     
   #ATUALIZA ATIVIDADE
-  @authentication_classes([TokenAuthentication]) 
-  @permission_classes([IsAuthenticated]) 
   def put(self, request, id_arg): 
     atividade = self.singleAtividade(id_arg) 
     serializer = AtividadeSerializer(atividade,  
@@ -97,8 +107,6 @@ class AtividadeView(APIView):
                       status.HTTP_400_BAD_REQUEST) 
     
   #REMOVE ATIVIDADE
-  @authentication_classes([TokenAuthentication]) 
-  @permission_classes([IsAuthenticated]) 
   def delete(self, request): 
     id_erro = "" 
     erro = False 
