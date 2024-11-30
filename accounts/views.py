@@ -11,6 +11,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth import login
 from django.contrib.auth import logout
 from django.contrib.auth.forms import UserCreationForm 
+from django.contrib.auth.models import User
 
 # Swagger 
 from drf_yasg.utils import swagger_auto_schema 
@@ -40,6 +41,21 @@ class RegistroView(APIView):
                 {'msg': 'Formulário inválido.', 'errors': formulario.errors},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+class PerfilView(APIView):
+    '''Recebe o nome de usuário e retorna o id do usuário'''
+    def get(self, request, nome_usuario):
+        try:
+            usuario = User.objects.get(username=nome_usuario)
+            return Response( 
+                {'id': usuario.id},  
+                status=status.HTTP_200_OK) 
+        except:
+            return Response( 
+            {'id': -1},  
+            status=status.HTTP_404_NOT_FOUND) 
+
+
 
 
 class CustomAuthToken(ObtainAuthToken): 

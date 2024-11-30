@@ -7,8 +7,8 @@ from rest_framework.response import Response
 from rest_framework import status 
 from rest_framework.decorators import api_view, renderer_classes 
 from rest_framework.renderers import JSONRenderer 
-from psiuApiApp.serializers import AtividadeSerializer, CaronaSerializer, ConhecerPessoasSerializer, EstudosSerializer, ExtracurricularesSerializer, LigaSerializer 
-from psiuApiApp.models import Atividade, Carona, ConhecerPessoas, Estudos, Extracurriculares, Liga 
+from psiuApiApp.serializers import AtividadeSerializer, CaronaSerializer, ConhecerPessoasSerializer, EstudosSerializer, ExtracurricularesSerializer, LigaSerializer, ParticipaAtividadeSerializer 
+from psiuApiApp.models import Atividade, Carona, ConhecerPessoas, Estudos, Extracurriculares, Liga, ParticipaAtividade 
 from rest_framework.authtoken.models import Token 
 
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -42,6 +42,7 @@ class AtividadeView(APIView):
           
           data=request.data
           data['criador_id'] = token_obj.user.username
+
           serializer = tipo_serializer(data=data)
           if serializer.is_valid():
               serializer.save() 
@@ -59,7 +60,7 @@ class AtividadeView(APIView):
     try: 
       queryset = Atividade.objects.get(id=id_arg)
       tipo_atividade = queryset.tipo_atividade
-      queryset = self.tipo_atividade_model['tipo_atividade'].objects.get(id=id_arg)
+      queryset = self.tipo_atividade_model[tipo_atividade].objects.get(id=id_arg)
 
       return queryset, tipo_atividade
     except Atividade.DoesNotExist: # id não existe 
@@ -77,7 +78,9 @@ class AtividadeView(APIView):
       queryset, tipo_atividade = self.singleAtividade(id_arg)
       if queryset:
           serializer = self.tipo_atividade_serializer[tipo_atividade](queryset)
-          return Response(serializer.data)
+          queryset_participantes = ParticipaAtividade.objects.filter(atividade=serializer.data['id'])
+          serializer_participantes = ParticipaAtividadeSerializer(queryset_participantes, many=True)
+          return Response({'atividade': serializer.data, 'participantes': serializer_participantes.data})
       else:
           return Response(
               {'msg': f'Atividade com id #{id_arg} nao existe'},
@@ -121,3 +124,43 @@ class AtividadeView(APIView):
       return Response({'error': f'item [{id_erro}] não encontrado'},status.HTTP_404_NOT_FOUND) 
     else: 
       return Response(status=status.HTTP_204_NO_CONTENT) 
+    
+
+class ParticipaAtividadeView(APIView): 
+  def post(self, request):
+      print(request.data['atividade'])
+          
+      try: 
+        token = request.META.get('HTTP_AUTHORIZATION').split(' ')[1] 
+        token_obj = Token.objects.get(key=token) 
+      except (Token.DoesNotExist, IndexError): 
+          return Response({'msg': 'Token não existe.'}, status=status.HTTP_400_BAD_REQUEST) 
+      
+      atividade = Atividade.objects.get(id=request.data['atividade'])
+      if atividade.criador_id == token_obj.user.username:
+         return Response({'msg': 'O criador não pode participar de sua própria atividade'}, status=status.HTTP_401_UNAUTHORIZED)
+      
+      usuario_participa = ParticipaAtividade.objects.filter(atividade=request.data['atividade'], usuario=token_obj.user.username) 
+      if len(usuario_participa) == 0:
+        if atividade.vagas > 0:
+          data=request.data
+          data['usuario'] = token_obj.user.username
+          atividade.vagas -= 1
+          atividade.save()
+
+          serializer = ParticipaAtividadeSerializer(data=data)
+          if serializer.is_valid():
+              serializer.save() 
+              return Response(serializer.data, status=status.HTTP_201_CREATED)
+          else:
+              print(serializer.errors)
+              return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'msg': 'Atividade sem vagas'}, status=status.HTTP_401_UNAUTHORIZED)
+      else:
+         atividade.vagas += len(usuario_participa)
+         atividade.save()
+
+         for participante in usuario_participa:
+            participante.delete()
+        
+      return Response({'msg': 'OK'}, status=status.HTTP_200_OK)

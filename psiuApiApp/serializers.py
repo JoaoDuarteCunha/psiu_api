@@ -1,6 +1,6 @@
 
 from rest_framework import serializers 
-from psiuApiApp.models import Atividade, Carona, ConhecerPessoas, Estudos, Extracurriculares, Liga 
+from psiuApiApp.models import Atividade, Carona, ConhecerPessoas, Estudos, Extracurriculares, Liga, ParticipaAtividade 
  
 class AtividadeSerializer(serializers.ModelSerializer): 
  class Meta: 
@@ -30,4 +30,9 @@ class LigaSerializer(serializers.ModelSerializer):
 class ConhecerPessoasSerializer(serializers.ModelSerializer): 
  class Meta: 
   model = ConhecerPessoas     # nome do modelo 
+  fields = '__all__' # lista de campos 
+
+class ParticipaAtividadeSerializer(serializers.ModelSerializer): 
+ class Meta: 
+  model = ParticipaAtividade     # nome do modelo 
   fields = '__all__' # lista de campos 

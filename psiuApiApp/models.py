@@ -3,10 +3,11 @@ from django.db import models
 class Atividade(models.Model): 
     id = models.AutoField(primary_key=True) 
     criador_id = models.TextField(db_column='criador_id')
-    adicionais = models.TextField(db_column='adicionais')
+    adicionais = models.TextField(db_column='adicionais', blank=True)
     data = models.DateField(db_column='data')
     hora = models.TimeField(db_column='hora')
     tipo_atividade = models.TextField(db_column='tipo_atividade')
+    vagas = models.PositiveIntegerField(db_column='vagas', default=4)
     
     class Meta: 
         managed = True 
@@ -79,3 +80,14 @@ class ConhecerPessoas(Atividade):
 
     def __str__(self): 
         return str(self.id)
+
+class ParticipaAtividade(models.Model): 
+    atividade = models.ForeignKey(Atividade, db_column='atividade', on_delete=models.CASCADE)
+    usuario = models.TextField(db_column='usuario')
+
+    class Meta: 
+        managed = True 
+        db_table = 'ParticipaAtividade' 
+        ordering = ['atividade'] 
+    def __str__(self): 
+        return str(self.atividade)
