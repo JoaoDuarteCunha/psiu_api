@@ -25,7 +25,7 @@ from django.contrib.auth.forms import UserCreationForm
 
 class RegistroView(APIView):
     def post(self, request):
-        formulario = UserCreationForm(request.POST) 
+        formulario = UserCreationForm(request.data) 
         if formulario.is_valid():
             senha = formulario.cleaned_data.get('password1')
             username = formulario.save()
