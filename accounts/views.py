@@ -24,6 +24,8 @@ from django.contrib.auth import authenticate, login
 from rest_framework.authtoken.models import Token
 from django.contrib.auth.forms import UserCreationForm
 
+from accounts.serializers import UserSerializer
+
 class RegistroView(APIView):
     @swagger_auto_schema( 
         operation_summary='Registra um novo usuário no site', 
@@ -79,6 +81,98 @@ class RegistroView(APIView):
                 {'msg': 'Formulário inválido.', 'errors': formulario.errors},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+class PerfilView(APIView):
+    @swagger_auto_schema( 
+        operation_summary='Retorna as informações de um usuário', 
+        operation_description="Recebe o nome de um usuário e retorna suas informações",
+        responses={ 
+            200: UserSerializer, 
+            404: 'Usuário não existe',
+        },
+    )
+    def get(self, request, nome_usuario):
+        ''' 
+        Verifica as informações de um usuário no site
+
+        Depende de: 
+        - APIView 
+        - User 
+        - Response 
+
+        :param APIView self: o próprio objeto 
+        :param Request request: um objeto representando o pedido HTTP 
+        :param string nome_usuario: o nome de usuário
+        :param HTTP: não tem
+        :return: os dados do usuário em formato JSON 
+        :rtype: JSON 
+        '''
+        try:
+            usuario = User.objects.get(username=nome_usuario)
+        except:
+            return Response({'msg': 'Usuário inexistente'}, status=status.HTTP_404_NOT_FOUND) 
+        serializer = UserSerializer(usuario)
+        print(serializer.data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class PerfilEditView(APIView):
+    @swagger_auto_schema( 
+        operation_description='Altera o email, primeiro nome e sobrenome do usuário se ele estiver logado e seu token for correspondente.', 
+        operation_summary='Altera dados do usuário', 
+        security=[{'Token':[]}], 
+        manual_parameters=[ 
+        openapi.Parameter('Authorization', openapi.IN_HEADER, 
+        type=openapi.TYPE_STRING, default='token ', 
+        description='Token de autenticação no formato "token \<<i>valor do token</i>\>"', 
+        ), 
+        ],
+        request_body=openapi.Schema( 
+        type=openapi.TYPE_OBJECT, 
+        properties={ 
+        'email': openapi.Schema(default='', description='Email do usuário', type=openapi.TYPE_STRING),
+        'first_name': openapi.Schema(default='', description='Primeiro nome do usuário',  type=openapi.TYPE_STRING),
+        'last_name': openapi.Schema(default='', description='Sobrenome do usuário', type=openapi.TYPE_STRING),
+        }, 
+        ), 
+        responses={ 
+            status.HTTP_200_OK: 'Dados alterados', 
+            status.HTTP_400_BAD_REQUEST: 'Erro nos dados.', 
+            status.HTTP_401_UNAUTHORIZED: 'Usuário não autenticado', 
+        }, 
+    )
+    def put(self, request):
+        ''' 
+        Altera os dados de um usuário no site
+
+        Depende de: 
+        - APIView 
+        - User 
+        - Response 
+
+        :param APIView self: o próprio objeto 
+        :param Request request: um objeto representando o pedido HTTP 
+        :param HTTP: não tem
+        :return: os dados do usuário em formato JSON 
+        :rtype: JSON 
+        '''
+        #Pega quem o usuário é com base no seu token
+        try: 
+            token = request.META.get('HTTP_AUTHORIZATION').split(' ')[1] 
+            token_obj = Token.objects.get(key=token) 
+        except (Token.DoesNotExist, IndexError): 
+            return Response({'msg': 'Token não existe.'}, status=status.HTTP_401_UNAUTHORIZED) 
+        user = token_obj.user 
+        
+        #Utiliza o serializer para alterar os dados desse usuário
+        serializer = UserSerializer(user, data=request.data) 
+        if serializer.is_valid(): #Se atividade for válida, retorna
+            serializer.save() 
+            return Response(serializer.data,  
+                        status.HTTP_200_OK) 
+        else: 
+            print(serializer.errors)
+            return Response(serializer.errors,  
+                        status.HTTP_400_BAD_REQUEST) 
 
 
 class CustomAuthToken(ObtainAuthToken): 

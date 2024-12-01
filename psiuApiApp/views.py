@@ -29,7 +29,18 @@ class AtividadeListaView(APIView):
 
   Possiblita:
   - get: Lista todas as atividades
-  '''    
+  - delete: Delete uma atividade
+  '''   
+
+  #Token de autenticação
+  authentication_classes = [TokenAuthentication]
+
+  #Autenticação necessária para todas as operações sem ser get
+  def get_permissions(self):
+      if self.request.method == 'GET':
+          return [AllowAny()]
+      else:
+          return [IsAuthenticated()]
 
   #LISTA UMA ATIVIDADE/TODAS ATIVIDADES
   @swagger_auto_schema( 
@@ -58,6 +69,59 @@ class AtividadeListaView(APIView):
     serializer = AtividadeSerializer(queryset, many=True)
     return Response(serializer.data)
 
+  @swagger_auto_schema(
+      operation_summary='Remove uma atividade', 
+      operation_description='Remove uma atividade', 
+      request_body=openapi.Schema(
+        type=openapi.TYPE_INTEGER,
+        description='ID da atividade a ser removida'
+      ),
+      security=[{'Token':[]}], 
+      manual_parameters=[ 
+      openapi.Parameter('Authorization', openapi.IN_HEADER, 
+      type=openapi.TYPE_STRING, default='token ', 
+      description='Token de autenticação no formato "token \<<i>valor do token</i>\>"', 
+      ), 
+      ], 
+      responses={ 
+          204: AtividadeSerializer(),  
+          404: None, 
+      }, 
+    ) 
+  #REMOVE ATIVIDADE
+  def delete(self, request): 
+    ''' 
+    Apaga uma atividade
+
+    Depende de: 
+    - APIView 
+    - Atividade
+    - AtividadeSerializer 
+    - Response 
+
+    :param APIView self: o próprio objeto 
+    :param Request request: um objeto representando o pedido HTTP  
+    :param HTTP: não tem
+    :return: a atividade em formato JSON 
+    :rtype: JSON 
+    '''
+    try: 
+        token = request.META.get('HTTP_AUTHORIZATION').split(' ')[1] 
+        token_obj = Token.objects.get(key=token) 
+    except (Token.DoesNotExist, IndexError): 
+        return Response({'msg': 'Token não existe.'}, status=status.HTTP_400_BAD_REQUEST) 
+      
+    atividade = Atividade.objects.get(id=request.data) 
+    atividade_tipo = tipo_atividade_model[atividade.tipo_atividade].objects.get(id=request.data)
+    if atividade.criador_id != token_obj.user.username: #Precisa ser o criador para apagar essa atividade
+      return Response({'error': 'Somente o criador pode apagar a atividade.'},status.HTTP_401_UNAUTHORIZED) 
+
+    if atividade and atividade_tipo: 
+      atividade.delete()
+      atividade_tipo.delete()
+      return Response(status=status.HTTP_204_NO_CONTENT) 
+    else: 
+      return Response({'error': f'item [{request.data}] não encontrado'},status.HTTP_404_NOT_FOUND)
 
 
 class AtividadeListaTipoView(APIView):
@@ -186,7 +250,8 @@ class AtividadeSingleIDView(APIView):
       )
 
   @swagger_auto_schema( 
-    operation_summary='Atualiza atividade', operation_description="Atualizar uma atividade", 
+    operation_summary='Atualiza atividade', operation_description="Atualizar uma atividade",
+    security=[{'Token':[]}], 
     request_body=openapi.Schema( 
      type=openapi.TYPE_OBJECT, 
      properties={ 
@@ -198,7 +263,11 @@ class AtividadeSingleIDView(APIView):
      }, 
     ), 
     responses={200: AtividadeSerializer(), 400: AtividadeSerializer(), }, 
-    manual_parameters=[ 
+    manual_parameters=[
+    openapi.Parameter('Authorization', openapi.IN_HEADER, 
+     type=openapi.TYPE_STRING, default='token ', 
+     description='Token de autenticação no formato "token \<<i>valor do token</i>\>"', 
+     ),  
      openapi.Parameter('id_arg',openapi.IN_PATH, default=41, type=openapi.TYPE_INTEGER,  
                        required=True, description='id da atividade na URL',),], 
   )  
@@ -307,51 +376,6 @@ class AtividadeSingleView(APIView):
               status=status.HTTP_400_BAD_REQUEST
           )
 
-  
-  @swagger_auto_schema(
-            operation_summary='Remove uma atividade', 
-            operation_description='Remove uma atividade', 
-            request_body=AtividadeSerializer, 
-            responses={ 
-                204: AtividadeSerializer(),  
-                404: None, 
-            }, 
-    ) 
-  #REMOVE ATIVIDADE
-  def delete(self, request): 
-    ''' 
-    Apaga uma atividade
-
-    Depende de: 
-    - APIView 
-    - Atividade
-    - AtividadeSerializer 
-    - Response 
-
-    :param APIView self: o próprio objeto 
-    :param Request request: um objeto representando o pedido HTTP  
-    :param HTTP: não tem
-    :return: a atividade em formato JSON 
-    :rtype: JSON 
-    '''
-    try: 
-        token = request.META.get('HTTP_AUTHORIZATION').split(' ')[1] 
-        token_obj = Token.objects.get(key=token) 
-    except (Token.DoesNotExist, IndexError): 
-        return Response({'msg': 'Token não existe.'}, status=status.HTTP_400_BAD_REQUEST) 
-
-    atividade = Atividade.objects.get(id=request.data) 
-    atividade_tipo = tipo_atividade_model[atividade.tipo_atividade].objects.get(id=request.data)
-    if atividade.criador_id != token_obj.user.username: #Precisa ser o criador para apagar essa atividade
-      return Response({'error': 'Somente o criador pode apagar a atividade.'},status.HTTP_401_UNAUTHORIZED) 
-
-    if atividade and atividade_tipo: 
-      atividade.delete()
-      atividade_tipo.delete()
-      return Response(status=status.HTTP_204_NO_CONTENT) 
-    else: 
-      return Response({'error': f'item [{request.data}] não encontrado'},status.HTTP_404_NOT_FOUND)
-
 
 class ParticipaAtividadeView(APIView):
 
@@ -364,7 +388,14 @@ class ParticipaAtividadeView(APIView):
       'atividade': openapi.Schema(default=5, description='ID da atividade', type=openapi.TYPE_INTEGER),
       'usuario': openapi.Schema(default='visitante', description='Nome do participante',  type=openapi.TYPE_STRING),
      }, 
+    ),
+    security=[{'Token':[]}], 
+    manual_parameters=[ 
+    openapi.Parameter('Authorization', openapi.IN_HEADER, 
+    type=openapi.TYPE_STRING, default='token ', 
+    description='Token de autenticação no formato "token \<<i>valor do token</i>\>"', 
     ), 
+    ], 
     responses={201: ParticipaAtividadeSerializer(), 200: 'Participação cancelada', 400: 'Token inválido', 401: 'Usuário não pode participar.'}, 
   )  
   def post(self, request):
