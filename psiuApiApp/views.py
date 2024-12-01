@@ -98,38 +98,45 @@ class AtividadeView(APIView):
     
   #ATUALIZA ATIVIDADE
   def put(self, request, id_arg): 
-    atividade = self.singleAtividade(id_arg) 
-    serializer = AtividadeSerializer(atividade,  
-                                  data=request.data) 
+    atividade, tipo_atividade = self.singleAtividade(id_arg) 
+    data = request.data
+    data['criador_id'] = atividade.criador_id
+    data['tipo_atividade'] = atividade.tipo_atividade
+    serializer = self.tipo_atividade_serializer[tipo_atividade](atividade,  
+                                  data=data) 
     if serializer.is_valid(): 
       serializer.save() 
       return Response(serializer.data,  
                       status.HTTP_200_OK) 
     else: 
+      print(serializer.errors)
       return Response(serializer.errors,  
                       status.HTTP_400_BAD_REQUEST) 
     
   #REMOVE ATIVIDADE
   def delete(self, request): 
-    id_erro = "" 
-    erro = False 
-    for id in request.data: 
-      atividade = Atividade.objects.get(id=id) 
-      if atividade: 
-        atividade.delete() 
-      else: 
-        id_erro += str(id) 
-        erro = True 
-    if erro: 
-      return Response({'error': f'item [{id_erro}] não encontrado'},status.HTTP_404_NOT_FOUND) 
-    else: 
+    try: 
+        token = request.META.get('HTTP_AUTHORIZATION').split(' ')[1] 
+        token_obj = Token.objects.get(key=token) 
+    except (Token.DoesNotExist, IndexError): 
+        return Response({'msg': 'Token não existe.'}, status=status.HTTP_400_BAD_REQUEST) 
+
+    atividade = Atividade.objects.get(id=request.data) 
+    atividade_tipo = self.tipo_atividade_model[atividade.tipo_atividade].objects.get(id=request.data)
+    if atividade.criador_id != token_obj.user.username:
+      return Response({'error': 'Somente o criador pode apagar a atividade.'},status.HTTP_401_UNAUTHORIZED) 
+
+    if atividade and atividade_tipo: 
+      atividade.delete()
+      atividade_tipo.delete()
       return Response(status=status.HTTP_204_NO_CONTENT) 
-    
+    else: 
+      return Response({'error': f'item [{request.data}] não encontrado'},status.HTTP_404_NOT_FOUND) 
+
 
 class ParticipaAtividadeView(APIView): 
   def post(self, request):
-      print(request.data['atividade'])
-          
+                
       try: 
         token = request.META.get('HTTP_AUTHORIZATION').split(' ')[1] 
         token_obj = Token.objects.get(key=token) 

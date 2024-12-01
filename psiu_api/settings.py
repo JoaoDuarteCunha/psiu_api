@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'coreapi', 
     'accounts',
     'rest_framework.authtoken',
+    'django_rest_passwordreset', # para recuperar senha 
 ]
 
 MIDDLEWARE = [
@@ -86,6 +87,7 @@ REST_FRAMEWORK = {
 
 WSGI_APPLICATION = 'psiu_api.wsgi.application'
 
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
