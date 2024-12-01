@@ -10,10 +10,10 @@ from drf_yasg import openapi
 
 schema_view = yasg_schema_view( 
    openapi.Info( 
-      title="API de Exemplo", 
+      title="API do Psiu!", 
       default_version='v1', 
       description="Descrição da API de exemplo", 
-      contact=openapi.Contact(email="meslin@puc-rio.br"), 
+      contact=openapi.Contact(email="joao.ddcunha@gmail.com"), 
       license=openapi.License(name='GNU GPLv3'), 
    ), 
    public=True, 
@@ -32,9 +32,9 @@ urlpatterns = [
        name='schema-swagger-ui'), 
     path('api/v1/',  
        include(routers.DefaultRouter().urls)), 
-    path('openapi',  
+    path('openapi/',  
        get_schema_view( 
-         title="API para Carros",  
-         description="API para obter dados dos carros",),  
+         title="API para o aplicativo Psiu!",  
+         description="API para obter dados das atividades e usuários do Psiu!",),  
        name='openapi-schema'), 
 ]

@@ -25,16 +25,54 @@ from rest_framework.authtoken.models import Token
 from django.contrib.auth.forms import UserCreationForm
 
 class RegistroView(APIView):
+    @swagger_auto_schema( 
+        operation_summary='Registra um novo usuário no site', 
+        operation_description="Retorna o token do usuário ao realizar a autenticação",
+        request_body=openapi.Schema( 
+            type=openapi.TYPE_OBJECT, 
+            properties={ 
+            'username': openapi.Schema(default='', description='Nome de usuário', type=openapi.TYPE_STRING),
+            'password1': openapi.Schema(default='', description='Senha',  type=openapi.TYPE_STRING),
+            'password2': openapi.Schema(default='', description='Confirmar Senha',  type=openapi.TYPE_STRING),
+            }, 
+        ), 
+        responses={ 
+            200: openapi.Response( 
+                description='Token', 
+                schema=openapi.Schema( 
+                    type=openapi.TYPE_OBJECT, 
+                    properties={'token': openapi.Schema(type=openapi.TYPE_STRING)}, 
+                ), 
+            ),
+            400: 'Bad request',
+            401: 'Houve uma falha',
+        },
+    )
     def post(self, request):
+        ''' 
+        Faz registro de novo usuário no site
+
+        Depende de: 
+        - APIView 
+        - Token
+        - User 
+        - Response 
+
+        :param APIView self: o próprio objeto 
+        :param Request request: um objeto representando o pedido HTTP  
+        :param HTTP: não tem
+        :return: token em formato JSON 
+        :rtype: JSON 
+        '''
         formulario = UserCreationForm(request.data) 
-        if formulario.is_valid():
+        if formulario.is_valid(): #Valida formulário
             senha = formulario.cleaned_data.get('password1')
-            username = formulario.save()
-            user = authenticate(request, username=username, password=senha)
+            username = formulario.save() #Cria novo usuário
+            user = authenticate(request, username=username, password=senha) #Autentica
             if user is not None: 
                 token, _ = Token.objects.get_or_create(user=user) 
-                login(request, user) 
-                return Response({'token': token.key}, status=status.HTTP_201_CREATED)
+                login(request, user) #Faz login
+                return Response({'token': token.key}, status=status.HTTP_201_CREATED) #Retorna token
             return Response({'msg': 'Ocorreu uma falha.'}, status=status.HTTP_401_UNAUTHORIZED)
         else:
             return Response(
@@ -42,56 +80,54 @@ class RegistroView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-class PerfilView(APIView):
-    '''Recebe o nome de usuário e retorna o id do usuário'''
-    def get(self, request, nome_usuario):
-        try:
-            usuario = User.objects.get(username=nome_usuario)
-            return Response( 
-                {'id': usuario.id},  
-                status=status.HTTP_200_OK) 
-        except:
-            return Response( 
-            {'id': -1},  
-            status=status.HTTP_404_NOT_FOUND) 
-
-
-
 
 class CustomAuthToken(ObtainAuthToken): 
     @swagger_auto_schema( 
-        operation_summary='Obtém o username do usuário', 
-        operation_description="Retorna o username do usuário ou apenas visitante se o usuário não possui conta",
-        security=[{'Token':[]}], 
-        manual_parameters=[ 
-            openapi.Parameter( 
-            'Authorization', 
-            openapi.IN_HEADER, 
-            type=openapi.TYPE_STRING, 
-            description='Token de autenticação no formato "token \<<i>valor do token</i>\>"', 
-            default='token ', 
-            ), 
-        ], 
+        operation_summary='Login de um usuário no site', 
+        operation_description="Retorna o token do usuário ao realizar a autenticação",
+        request_body=openapi.Schema( 
+            type=openapi.TYPE_OBJECT, 
+            properties={ 
+            'username': openapi.Schema(default='', description='Nome de usuário', type=openapi.TYPE_STRING),
+            'password': openapi.Schema(default='', description='Senha',  type=openapi.TYPE_STRING),
+            }, 
+        ), 
         responses={ 
             200: openapi.Response( 
-                description='Nome do usuário', 
+                description='Token', 
                 schema=openapi.Schema( 
                     type=openapi.TYPE_OBJECT, 
-                    properties={'username': openapi.Schema(type=openapi.TYPE_STRING)}, 
+                    properties={'token': openapi.Schema(type=openapi.TYPE_STRING)}, 
                 ), 
-            ) 
+            ),
+            401: 'Login ou senha incorretos',
         },
     )
-    def post(self, request, *args, **kwargs): 
+    def post(self, request, *args, **kwargs):
+        ''' 
+        Faz login de usuário no site
+
+        Depende de: 
+        - APIView 
+        - Token
+        - User 
+        - Response 
+
+        :param APIView self: o próprio objeto 
+        :param Request request: um objeto representando o pedido HTTP  
+        :param HTTP: não tem
+        :return: token em formato JSON 
+        :rtype: JSON 
+        '''
         serializer = self.serializer_class(data=request.data, context={'request': request}) 
-        if serializer.is_valid(): 
+        if serializer.is_valid(): #Verifica se os dados são válidos
             username = serializer.validated_data['username'] 
             password = serializer.validated_data['password']  
-            user = authenticate(request, username=username, password=password) 
+            user = authenticate(request, username=username, password=password) #Autentica
             if user is not None: 
                 token, _ = Token.objects.get_or_create(user=user) 
-                login(request, user) 
-                return Response({'token': token.key}) 
+                login(request, user) #Realiza login
+                return Response({'token': token.key}) #Retorna token
             return Response(status=status.HTTP_401_UNAUTHORIZED) 
 
     
@@ -115,18 +151,33 @@ class CustomAuthToken(ObtainAuthToken):
             status.HTTP_500_INTERNAL_SERVER_ERROR: 'Erro no servidor', 
         }, 
     )
-    def delete(self, request): 
+    def delete(self, request):
+        ''' 
+        Faz logout de usuário no site
+
+        Depende de: 
+        - APIView 
+        - Token
+        - User 
+        - Response 
+
+        :param APIView self: o próprio objeto 
+        :param Request request: um objeto representando o pedido HTTP  
+        :param HTTP: não tem
+        :return: mensagem de sucesso em formato JSON 
+        :rtype: JSON 
+        '''
         try: 
             token = request.META.get('HTTP_AUTHORIZATION').split(' ')[1] 
             token_obj = Token.objects.get(key=token) 
         except (Token.DoesNotExist, IndexError): 
             return Response({'msg': 'Token não existe.'}, status=status.HTTP_400_BAD_REQUEST) 
         user = token_obj.user 
-        if user.is_authenticated: 
+        if user.is_authenticated: #Se usuário está autenticado
             request.user = user 
-            logout(request) 
+            logout(request) #Realiza logout
             token = Token.objects.get(user=user) 
-            token.delete() 
+            token.delete() #Deleta token
             return Response({'msg': 'Logout bem-sucedido.'},  
             status=status.HTTP_200_OK) 
         else: 
@@ -134,6 +185,29 @@ class CustomAuthToken(ObtainAuthToken):
             status=status.HTTP_403_FORBIDDEN) 
 
 
+    @swagger_auto_schema( 
+        operation_summary='Obtém o username do usuário', 
+        operation_description="Retorna o username do usuário ou apenas visitante se o usuário não possui conta",
+        security=[{'Token':[]}], 
+        manual_parameters=[ 
+            openapi.Parameter( 
+            'Authorization', 
+            openapi.IN_HEADER, 
+            type=openapi.TYPE_STRING, 
+            description='Token de autenticação no formato "token \<<i>valor do token</i>\>"', 
+            default='token ', 
+            ), 
+        ], 
+        responses={ 
+            200: openapi.Response( 
+                description='Nome do usuário', 
+                schema=openapi.Schema( 
+                    type=openapi.TYPE_OBJECT, 
+                    properties={'username': openapi.Schema(type=openapi.TYPE_STRING)}, 
+                ), 
+            ) 
+        },
+    )
     def get(self, request): 
         ''' 
         Parâmetros: o token de acesso 
@@ -185,6 +259,21 @@ class CustomAuthToken(ObtainAuthToken):
             ), 
         },)
     def put(self, request): 
+        ''' 
+        Atualiza a senha de usuário no site
+
+        Depende de: 
+        - APIView 
+        - Token
+        - User 
+        - Response 
+
+        :param APIView self: o próprio objeto 
+        :param Request request: um objeto representando o pedido HTTP  
+        :param HTTP: não tem
+        :return: token em formato JSON 
+        :rtype: JSON 
+        '''
         token = request.META.get('HTTP_AUTHORIZATION').split(' ')[1]    # token 
         token_obj = Token.objects.get(key=token) 
         user = token_obj.user 
