@@ -77,8 +77,7 @@ class RegistroView(APIView):
                 return Response({'token': token.key}, status=status.HTTP_201_CREATED) #Retorna token
             return Response({'msg': 'Ocorreu uma falha.'}, status=status.HTTP_401_UNAUTHORIZED)
         else:
-            return Response(
-                {'msg': 'Formulário inválido.', 'errors': formulario.errors},
+            return Response(formulario.errors,
                 status=status.HTTP_400_BAD_REQUEST
             )
 
